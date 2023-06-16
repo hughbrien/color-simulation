@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "color-simulation.fullname" . }}-blue
+  labels:
+    helm.sh/chart: {{ include "color-simulation.fullname" . }}-blue-{{.Chart.Version }}
+    app.kubernetes.io/name: {{ include "color-simulation.fullname" . }}-blue
+    app.kubernetes.io/instance: {{ include "color-simulation.fullname" . }}-blue
+    app.kubernetes.io/version: {{.Release.Verion  }}
+    app.kubernetes.io/managed-by: Helm
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "color-simulation.fullname" . }}-blue
+      app.kubernetes.io/instance: {{ include "color-simulation.fullname" . }}-blue
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        app.kubernetes.io/name: {{ include "color-simulation.fullname" . }}-blue
+        app.kubernetes.io/instance: {{ include "color-simulation.fullname" . }}-blue
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ include "color-simulation.fullname" . }}-blue
+          command: [ "/bin/sh", "-c" ]
+          args: [ "echo 'Going to allocate 60MB of memory!'; stress --vm 2 --vm-bytes 30M --vm-hang 120 --backoff 10000000 --verbose" ]
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
